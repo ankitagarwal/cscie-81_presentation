@@ -181,8 +181,9 @@ for dataset_url in get_dataset_list():
     error_rates.append(dataerrorrate)
 
     # Calculate mean error rates.
+
     mean_error_rates.append([np.mean(cart_error), np.mean(bagging_error), np.mean(boosting_error), np.mean(random_error)])
-    mean_scores.append([np.mean(cart_score), np.mean(bagging_score), np.mean(boosting_score), np.mean(random_error)])
+    mean_scores.append([np.mean(cart_score), np.mean(bagging_score), np.mean(boosting_score), np.mean(random_score)])
 
 print("Average Times: ")
 cartTime = np.mean([x[0] for x in meanTimes])
@@ -245,5 +246,15 @@ plt.xlabel('Data Set')
 plt.title('Line plot of classication scores for various datasets using various algorithms')
 plt.show()
 
+mean_times = np.array(meanTimes)
+plt.plot(mean_times.T[0], label='CART')
+plt.plot(mean_times.T[1], label='Bagging')
+plt.plot(mean_times.T[2], label='Boosting')
+plt.plot(mean_times.T[3], label='Randomization')
+plt.legend(loc='best')
+plt.ylabel('Run times')
+plt.xlabel('Data Set')
+plt.title('Line plot of run times for various datasets using various algorithms')
+plt.show()
 
 
