@@ -31,22 +31,24 @@ from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.cross_validation import cross_val_score
 from sklearn import cross_validation
 from sklearn.preprocessing import Imputer
+import timeit
+import time
 
 CSV_SEP = ','
 
 # get list of datasets of UCI rep to use
 def get_dataset_list():
     datasets = [
-                'data/winequality-red.csv',
-                'data/winequality-white.csv',
-                'data/house-votes-84.data.txt',
-                'data/krkopt.data.txt',
-                'data/letter-recognition.data.txt',
-                'data/sat.trn.txt',
-                'data/segment.dat.txt',
-                'data/sonar.all-data.txt',
-                'data/soybean-large.data.txt',
                 'data/anneal.data.txt',
+                'data/segment.dat.txt',
+                'data/krkopt.data.txt',
+                'data/house-votes-84.data.txt',
+                'data/soybean-large.data.txt',
+                'data/sat.trn.txt',
+                'data/sonar.all-data.txt',
+                'data/letter-recognition.data.txt',
+                'data/winequality-white.csv',
+                'data/winequality-red.csv'
 
                 # 'splice.data.txt' - Need to enter comma after every char ,rest cleaning is done.
                 #'data/glass.data.txt', - This is continuous
@@ -112,11 +114,20 @@ def convert_categorical_data(arr):
         X.append(new_vals)
     return X
 
+def time_fn( fn, *args, **kwargs ):
+    start = time.clock()
+    results = fn( *args, **kwargs )
+    end = time.clock()
+    fn_name = fn.__module__ + "." + fn.__name__
+    print(fn_name + ": " + str(end-start) + "s")
+    return [results, end-start]
 
 # Main
 scores = []
 error_rates = []
 mean_error_rates = []
+mean_scores = []
+meanTimes = []
 for dataset_url in get_dataset_list():
     print("Testing: "+dataset_url)
     datascore = []
@@ -141,10 +152,13 @@ for dataset_url in get_dataset_list():
     X = imp.transform(X)
 
     # Get cross validation scores.
-    cart_score = do_cart(X, Y)
-    bagging_score = do_bagging(X, Y)
-    boosting_score = do_boosting(X, Y)
-    random_score = do_randomization(X, Y)
+    cart_score, cartTime = time_fn(do_cart, X, Y)
+    bagging_score, bagTime = time_fn(do_bagging, X, Y)
+    boosting_score, boostTime = time_fn(do_boosting, X, Y)
+    random_score, randomTime = time_fn(do_randomization, X, Y)
+
+    print("Cart: {0} bag: {1} boost: {2} random: {3}".format(cartTime, bagTime, boostTime, randomTime))
+    meanTimes.append([cartTime, bagTime, boostTime, randomTime])
 
     # Store scores.
     datascore.append(cart_score)
@@ -168,15 +182,36 @@ for dataset_url in get_dataset_list():
 
     # Calculate mean error rates.
     mean_error_rates.append([np.mean(cart_error), np.mean(bagging_error), np.mean(boosting_error), np.mean(random_error)])
+    mean_scores.append([np.mean(cart_score), np.mean(bagging_score), np.mean(boosting_score), np.mean(random_error)])
 
+print("Average Times: ")
+cartTime = np.mean([x[0] for x in meanTimes])
+print("Cart: {0}".format(cartTime))
+bagTime = np.mean([x[1] for x in meanTimes])
+print("Bag: {0}".format(bagTime))
+boostTime = np.mean([x[2] for x in meanTimes])
+print("Boost: {0}".format(boostTime))
+randomTime = np.mean([x[3] for x in meanTimes])
+print("Random: {0}".format(randomTime))
+
+names = dict()
+names[0] = "Annealing (9)"
+names[1] = "Voting (15)"
+names[2] = "King Rook King Pawn (31)"
+names[3] = "Soybean (6)"
+names[4] = "Segment (4)"
+names[5] = "Satellite (8)"
+names[6] = "Sonar (1)"
+names[7] = "Letter Recognition (2)"
+names[8] = "Wine quality - white"
+names[9] = "Wine quality - red"
 
 # Plot box plot - scores.
 for idx, score in enumerate(scores):
-    print(idx, score)
     plt.boxplot(score, labels=['CART', 'Bagging', 'Boosting', 'Randomization'])
     plt.ylabel('Score')
     plt.xlabel('Classification Method')
-    plt.title('Box plot of classification score vs various methods - Dataset ' + str(idx))
+    plt.title('Classification Score - ' + names[idx])
     plt.show()
 
 # Plot box plot - Error rates.
@@ -184,7 +219,7 @@ for idx, errorrate in enumerate(error_rates):
     plt.boxplot(errorrate, labels=['CART', 'Bagging', 'Boosting', 'Randomization'])
     plt.ylabel('Error rates')
     plt.xlabel('Classification Method')
-    plt.title('Box plot of error rates vs various methods - Dataset ' + str(idx))
+    plt.title('Error Rates -' + names[idx])
     plt.show()
 
 # Plot error rates of various algorithms
@@ -195,6 +230,20 @@ plt.plot(mean_error_rates.T[2], label='Boosting')
 plt.plot(mean_error_rates.T[3], label='Randomization')
 plt.legend(loc='best')
 plt.ylabel('Error rates')
-plt.xlabel('Classification data set')
+plt.xlabel('Data Set')
 plt.title('Line plot of error rates for various datasets using various algorithms')
 plt.show()
+
+mean_scores = np.array(mean_scores)
+plt.plot(mean_scores.T[0], label='CART')
+plt.plot(mean_scores.T[1], label='Bagging')
+plt.plot(mean_scores.T[2], label='Boosting')
+plt.plot(mean_scores.T[3], label='Randomization')
+plt.legend(loc='best')
+plt.ylabel('Classification scores')
+plt.xlabel('Data Set')
+plt.title('Line plot of classication scores for various datasets using various algorithms')
+plt.show()
+
+
+
